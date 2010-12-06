@@ -6,7 +6,8 @@ module ElasticSearch
     class HTTP < Base
 
       DEFAULTS = {
-        :timeout => 5
+        :timeout => 5,
+        :connect_timeout => 5
       }.freeze
 
       def initialize(server, options={})
@@ -18,6 +19,7 @@ module ElasticSearch
         @session = Patron::Session.new
         @session.base_url = @server
         @session.timeout = @options[:timeout]
+        @session.connect_timeout = @options[:connect_timeout]
         @session.headers['User-Agent'] = 'ElasticSearch.rb v0.1'
       end
 
