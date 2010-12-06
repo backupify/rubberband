@@ -64,12 +64,14 @@ module ElasticSearch
 
     def execute(method_name, *args)
       disconnect_on_max! if @max_requests and @request_count >= @max_requests
-      @request_count += 1
+      retries = 0
       begin
+        @request_count += 1
         super
       rescue ElasticSearch::RetryableError
         disconnect!
-        retry
+        retries = retries + 1
+        retry unless retries > @retries
       end
     end
 
