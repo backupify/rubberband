@@ -18,7 +18,6 @@ module ElasticSearch
 
         handle_error(response) unless response.status == 200
         hit = encoder.decode(response.body)
-        unescape_id!(hit) #TODO extract these two calls from here and search
         set_encoding!(hit)
         hit # { "_id", "_index", "_type", "_source" }
       end
@@ -40,7 +39,6 @@ module ElasticSearch
         results = encoder.decode(response.body)
         # unescape ids
         results["hits"]["hits"].each do |hit|
-          unescape_id!(hit)
           set_encoding!(hit)
         end
         results # {"hits"=>{"hits"=>[{"_id", "_type", "_source", "_index", "_score"}], "total"}, "_shards"=>{"failed", "total", "successful"}}
@@ -52,7 +50,6 @@ module ElasticSearch
         results = encoder.decode(response.body)
         # unescape ids
         results["hits"]["hits"].each do |hit|
-          unescape_id!(hit)
           set_encoding!(hit)
         end
         results # {"hits"=>{"hits"=>[{"_id", "_type", "_source", "_index", "_score"}], "total"}, "_shards"=>{"failed", "total", "successful"}, "_scrollId"}
