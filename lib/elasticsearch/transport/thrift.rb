@@ -1,4 +1,9 @@
-require 'thrift'
+begin
+  require 'thrift'
+rescue LoadError => error
+  raise "Please install the thrift gem (>= 0.5.0) to use the Thrift transport."
+end
+
 $LOAD_PATH.unshift(File.join(File.dirname(__FILE__), "thrift"))
 require 'rest'
 
@@ -37,6 +42,16 @@ module ElasticSearch
         @transport.close rescue nil
       end
 
+      def all_nodes
+        thrift_addresses = nodes_info([])["nodes"].collect { |id, node| node["thrift_address"] }
+        thrift_addresses.collect! do |a|
+          if a =~ /.*\/([\d.:]+)/
+            $1
+          end
+        end.compact!
+        thrift_addresses
+      end
+
       private
 
       def parse_server(server)
@@ -61,7 +76,7 @@ module ElasticSearch
           when :get
             request.method = ElasticSearch::Thrift::Method::GET
           when :put
-            request.method = ElasticSearch::Thrift::Method::GET
+            request.method = ElasticSearch::Thrift::Method::PUT
           when :post
             request.method = ElasticSearch::Thrift::Method::POST
           when :delete
@@ -69,7 +84,7 @@ module ElasticSearch
           end
 
           request.uri = uri
-          request.params = stringify!(params) #TODO this will change to parameters= in versions > 0.11.0
+          request.parameters = stringify!(params)
           request.body = body
           request.headers = stringify!(headers)
           response = @client.execute(request)

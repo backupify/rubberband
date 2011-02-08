@@ -65,6 +65,13 @@ module ElasticSearch
         handle_error(response) unless response.status == 200
         encoder.decode(response.body) # {"count", "_shards"=>{"failed", "total", "successful"}}
       end
+
+      def bulk(actions)
+        body = actions.inject("") { |a, s| a << encoder.encode(s) << "\n" }
+        response = request(:post, {:op => '_bulk'}, {}, body)
+        handle_error(response) unless response.status == 200
+        encoder.decode(response.body) # {"items => [ {"delete"/"create" => {"_index", "_type", "_id", "ok"}} ] }
+      end
     end
 
     module IndexAdminProtocol
@@ -86,6 +93,10 @@ module ElasticSearch
 
       def update_mapping(index, type, mapping, options)
         standard_request(:put, {:index => index, :type => type, :op => "_mapping"}, options, encoder.encode(mapping))
+      end
+
+      def index_mapping(index_list, options={})
+        standard_request(:get, {:index => index_list, :op => "_mapping"})
       end
 
       def flush(index_list, options={})
@@ -151,8 +162,9 @@ module ElasticSearch
       def generate_uri(options)
         path = ""
         path << "/#{Array(options[:index]).collect { |i| escape(i.downcase) }.join(",")}" if options[:index] && !options[:index].empty?
+        path << "/" if options[:index] && options[:index].empty?
         path << "/#{Array(options[:type]).collect { |t| escape(t) }.join(",")}" if options[:type] && !options[:type].empty?
-        path << "/#{Array(options[:id]).collect { |id| escape(id) }.join(",")}" if options[:id] && !options[:id].empty?
+        path << "/#{Array(options[:id]).collect { |id| escape(id) }.join(",")}" if options[:id] && !options[:id].to_s.empty?
         path << "/#{options[:op]}" if options[:op]
         path
       end
@@ -216,16 +228,6 @@ module ElasticSearch
       include IndexAdminProtocol
       include ClusterAdminProtocol
       include ProtocolHelpers
-
-      def all_nodes
-        http_addresses = nodes_info([])["nodes"].collect { |id, node| node["http_address"] }
-        http_addresses.collect! do |a|
-          if a =~ /inet\[.*\/([\d.:]+)\]/
-            $1
-          end
-        end.compact!
-        http_addresses
-      end
 
     end
   end

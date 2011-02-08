@@ -23,6 +23,16 @@ module ElasticSearch
         @session.headers['User-Agent'] = 'ElasticSearch.rb v0.1'
       end
 
+      def all_nodes
+        http_addresses = nodes_info([])["nodes"].collect { |id, node| node["http_address"] }
+        http_addresses.collect! do |a|
+          if a =~ /inet\[.*\/([\d.:]+)\]/
+            $1
+          end
+        end.compact!
+        http_addresses
+      end
+
       private
 
       def request(method, operation, params={}, body=nil, headers={})
@@ -30,7 +40,7 @@ module ElasticSearch
           uri = generate_uri(operation)
           query = generate_query_string(params)
           path = [uri, query].join("?")
-          #puts "request: #{@server} #{path} #{body}"
+          #puts "request: #{method} #{@server} #{path} #{body}"
           response = @session.request(method, path, headers, :data => body)
           handle_error(response) if response.status >= 500
           response
